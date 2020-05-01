@@ -1,0 +1,9 @@
+#!/bin/bash
+
+Folder=$1
+Files="$(ls $Folder)"
+
+for File in $Files
+do
+	bash landsat_preprocess.txt $File $Folder bgr_example.tif
+done

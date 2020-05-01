@@ -1,0 +1,38 @@
+#!/bin/bash
+
+Filename=$1
+Folder=$2
+Example=$3
+OutLoc="/Users/crivard/Desktop/StarFM/BGR/landsat_scenes"
+
+Input=$Folder"/"$Filename
+Output=$OutLoc"/deletes/1"$Filename
+gdalwarp $Input $Output -tr 0.000269494585235856472 0.000269494585235856472
+
+Input=$Output
+Output=$OutLoc"/deletes/2"$Filename
+rio clip $Input $Output --like $Example
+
+Input=$Output
+Output=$OutLoc"/deletes/3"$Filename
+
+echo $Filename
+lsType=$(echo $Filename | cut -c1-4)
+echo $lsType
+
+if [ "$lsType" = "LC08" ]
+then
+    echo "in if statement"
+    gdal_translate $Input $Output -b 2 -b 3 -b 4 -b 5 -b 6 -ot Int16
+else
+    gdal_translate $Input $Output -b 1 -b 2 -b 3 -b 4 -b 5 -ot Int16
+fi
+
+Input=$Output
+
+for i in {1..5}
+do
+    Output=$OutLoc"/B"$i"/"$Filename"_B"$i".bin"
+    gdal_translate -of ENVI $Input $Output -b $i
+done
+

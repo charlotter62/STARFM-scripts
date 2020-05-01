@@ -1,0 +1,63 @@
+#!/bin/bash
+modFiles=$(find /Users/crivard/Desktop/StarFM/BGR/modis_scenes/B1 -type f -name "*.bin")
+landFiles=$(find /Users/crivard/Desktop/StarFM/BGR/landsat_scenes/B1 -type f -name "*.bin")
+
+modFiles=$(   IFS=$' '
+    echo "${modFiles[*]}" | sort -k1.62,1.72
+)
+landFiles=$(   IFS=$' '
+    echo "${landFiles[*]}" | sort -k1.65,1.72
+)
+landsat_index=10
+next_index=11
+landFile=$(echo $landFiles | cut -d " " -f $landsat_index)
+modis_index=45
+modFile=$(echo $modFiles | cut -d " " -f $modis_index)
+
+for modFile in $modFiles
+do
+    #Get Modis Image
+    mod_fileName=$(echo ${modFile:(-32)})
+    mod_dateText=$(echo ${mod_fileName:11:10})
+    mod_year=$(echo ${mod_dateText:0:4})
+    mod_month=$(echo ${mod_dateText:5:2})
+    mod_day=$(echo ${mod_dateText:8:2})
+    mod_date_string=$mod_year"-"$mod_month"-"$mod_day
+    mod_date=$(date -d $mod_date_string +%s)
+    
+    #Get Landsat Image
+    land_fileName=$(echo ${landFile:(-31)})
+    land_dateText=$(echo ${land_fileName:12:8})
+    land_year=$(echo ${land_dateText:0:4})
+    land_month=$(echo ${land_dateText:4:2})
+    land_day=$(echo ${land_dateText:6:2})
+    land_date_string=$land_year"-"$land_month"-"$land_day
+    land_date=$(date -d $land_date_string +%s)
+
+    #Increment to next landsat image in line
+    landFile2=$(echo $landFiles | cut -d " " -f $next_index)
+    land2_fileName=$(echo ${landFile2:(-31)})
+    land2_dateText=$(echo ${land2_fileName:12:8})
+    land2_year=$(echo ${land2_dateText:0:4})
+    land2_month=$(echo ${land2_dateText:4:2})
+    land2_day=$(echo ${land2_dateText:6:2})
+    land2_date_string=$land2_year"-"$land2_month"-"$land2_day
+    land2_date=$(date -d $land2_date_string +%s)
+    
+    echo "mod-date: "$mod_date_string
+    echo "land-date: "$land_date_string
+    echo "land2-date: "$land2_date_string
+
+    if [ $mod_date -lt $land2_date ]
+    then
+        echo "land1 < mod < land2"
+        echo "mod file name: "$mod_fileName
+        echo "land file name: "$land_fileName
+    else
+        echo "land1 < land2 <= mod"
+        landFile=$landFile2
+        next_index=$((next_index + 1))
+        echo "mod file name: "$mod_fileName
+        echo "land2 file name: "$land2_fileName
+    fi
+done

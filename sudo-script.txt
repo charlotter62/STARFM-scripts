@@ -1,0 +1,31 @@
+for lf in $landFiles
+do
+    echo $lf
+done
+
+landsat_index=0
+landFile=("${landFiles[@]:0:1}")
+modFile=("${modFiles[@]:0:1}")
+modLand=""
+#landFile2=("${landFiles[@]:$next_index:1}")
+
+if [ $mod_date -lt $land2_date ]
+    then
+        echo "true"
+    else
+        echo "false"
+fi
+
+land2_date=$(date -d $land2_date_string +%s)
+mod_date=$(date -d 2001-06-14 +%s)
+land2_date=$(date -d 2001-06-11 +%s)
+
+
+vart="variable"
+sed -i -e "s/abc/${vart}/g" test_text.t
+
+^changes to variable
+
+if [ $mod_date == $land2_date ]
+        then
+            modLand=modFile

@@ -1,0 +1,105 @@
+#!/bin/bash
+
+#Run out of the BGR project folder
+folder=/mnt/data2/disk1/soilcarbon/crivard/StarFM/BGR
+cd $folder
+
+#Get Modis & Landsat Files
+modFiles=$(find ./modis_scenes/B1 -type f -name "*.bin")
+landFiles=$(find ./landsat_scenes/B1 -type f -name "*.bin")
+
+#Sort Modis & Landsat Files by Date
+modFiles=$(   IFS=$' '
+    echo "${modFiles[*]}" | sort -k1.30,1.39
+)
+landFiles=$(   IFS=$' '
+    echo "${landFiles[*]}" | sort -k1.33,1.40
+)
+
+#Set initial images before loop
+landsat_index=1
+next_index=2
+landFile=$(echo $landFiles | cut -d " " -f $landsat_index)
+modis_index=1
+modFile=$(echo $modFiles | cut -d " " -f $modis_index)
+
+for modFile in $modFiles
+do
+    echo "NEXT"
+    #Get Modis Image
+    mod_fileName=$(echo ${modFile:(-32)})
+    mod_dateText=$(echo ${mod_fileName:11:10})
+    mod_year=$(echo ${mod_dateText:0:4})
+    mod_month=$(echo ${mod_dateText:5:2})
+    mod_day=$(echo ${mod_dateText:8:2})
+    mod_date_string=$mod_year"-"$mod_month"-"$mod_day
+    mod_date=$(date -d $mod_date_string +%s)
+    
+    #Get Landsat Image
+    land_fileName=$(echo ${landFile:(-31)})
+    land_dateText=$(echo ${land_fileName:12:8})
+    land_year=$(echo ${land_dateText:0:4})
+    land_month=$(echo ${land_dateText:4:2})
+    land_day=$(echo ${land_dateText:6:2})
+    land_date_string=$land_year"-"$land_month"-"$land_day
+    land_date=$(date -d $land_date_string +%s)
+    
+    #Increment to next landsat image in line
+    landFile2=$(echo $landFiles | cut -d " " -f $next_index)
+    land2_fileName=$(echo ${landFile2:(-31)})
+    land2_dateText=$(echo ${land2_fileName:12:8})
+    land2_year=$(echo ${land2_dateText:0:4})
+    land2_month=$(echo ${land2_dateText:4:2})
+    land2_day=$(echo ${land2_dateText:6:2})
+    land2_date_string=$land2_year"-"$land2_month"-"$land2_day
+    land2_date=$(date -d $land2_date_string +%s)
+    
+    if [ $mod_date -lt $land2_date ]
+    then
+        echo "land1 < mod < land2"
+        echo "mod file name: "$mod_fileName
+        echo "land file name: "$land_fileName
+    else
+        echo "land1 < land2 <= mod"
+        landFile=$landFile2
+        next_index=$((next_index + 1))
+        echo "mod file name: "$mod_fileName
+        echo "land2 file name: "$land2_fileName
+        #Get final landsat file info
+        land_fileName=$(echo ${landFile:(-31)})
+        land_dateText=$(echo ${land_fileName:12:8})
+        land_year=$(echo ${land_dateText:0:4})
+        land_month=$(echo ${land_dateText:4:2})
+        land_day=$(echo ${land_dateText:6:2})
+    fi
+    
+    #Get Corresponding Modis to train
+    modLand_date_string=$land_year"-"$land_month"-"$land_day
+    modLand="./modis_scenes/B1/MCD43A4_BG_"$modLand_date_string".tif_B1.bin"
+
+    #Rewrite Input Files
+    sed -i -e "s~$replace1~$modLand~" ./scripts/input_bgr.txt
+    replace2="landsat.bin"
+    sed -i -e "s~$replace2~$landFile~" ./scripts/input_bgr.txt
+    replace3="pred.bin"
+    sed -i -e "s~$replace3~$modFile~" ./scripts/input_bgr.txt
+    outname="./output/BGR_mod-"$mod_year$mod_month$mod_day"_land-"$land_year$land_month$land_day"_B1.bin"
+    replace4="output.bin"
+    sed -i -e "s~$replace4~$outname~" ./scripts/input_bgr.txt
+    
+    #Print Selections
+    echo "mod-land: "$modLand
+    echo "land2-date: "$land2_date_string
+    echo " "
+    
+    #Run STARFM!
+    chmod u+x ./source/StarFM.exe
+    ./source/StarFM.exe ./scripts/input_bgr.txt
+    
+    #Change variables back to default values
+    #sed -i -e "s~$modLand~$replace1~" ./scripts/input_bgr.txt
+    #sed -i -e "s~$landFile~$replace2~" ./scripts/input_bgr.txt
+    #sed -i -e "s~$modFile~$replace3~" ./scripts/input_bgr.txt
+    #sed -i -e "s~$outname~$replace4~" ./scripts/input_bgr.txt
+    
+done
