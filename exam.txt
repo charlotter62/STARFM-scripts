@@ -1,9 +1,0 @@
-#!/bin/bash
-lsType='LTO8'
-echo $lsType
-
-if [ "$lsType" = "LTO8" ]; then
-    echo "hi"
-else
-	echo "bye"
-fi
